@@ -18,4 +18,11 @@ export class RegisterDto {
     message: 'Password has to be between 3 and 20 characters',
   })
   confirmPassword: string;
+  name: string; 
+  phoneNumber: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  offerSkills?: string[];
+  wantSkills?: string[];
 }

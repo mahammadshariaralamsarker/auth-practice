@@ -18,8 +18,8 @@ export class AuthService {
     private mailService: MailService,
   ) {}
   //Register Account
-  async register(dto: RegisterDto) {
-    const { email, password, confirmPassword } = dto;
+  async register(data: string, file: Express.Multer.File) {
+    const { email, password, confirmPassword } = data;
     const foundUser = await this.prisma.user.findUnique({ where: { email } });
     if (foundUser) {
       throw new BadRequestException('Email already exists');
@@ -68,13 +68,13 @@ export class AuthService {
       await this.prisma.otp.deleteMany({
         where: { email },
       });
-      // Create user
+      /*   // Create user
       await this.prisma.user.create({
         data: {
           email,
           hashedPassword,
         },
-      });
+      }); */
       return { message: 'Account created successfully' };
     }
   }

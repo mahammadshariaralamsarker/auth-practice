@@ -1,15 +1,29 @@
-import { Body, Controller, Get, Post, Res, Req, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Res,
+  Req,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
   //Register Router
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @UseInterceptors(FileInterceptor('image'))
+  register(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('data') data:string,
+  ) {
+    return this.authService.register(data, file);
   }
   // Login Router
   @Post('login')
@@ -39,10 +53,16 @@ export class AuthController {
   }
   // change password
   @Post('changePassword/:token')
-  changePassword(@Param('token') token: string,
-    @Body() body: { password: string; confirmPassword: string; token: string }){
-      return this.authService.changePassword(body.password,body.confirmPassword,token)
-    }
+  changePassword(
+    @Param('token') token: string,
+    @Body() body: { password: string; confirmPassword: string; token: string },
+  ) {
+    return this.authService.changePassword(
+      body.password,
+      body.confirmPassword,
+      token,
+    );
+  }
   @Get('logout')
   Logout(@Req() req, @Res() res) {
     return this.authService.logout(req, res);
