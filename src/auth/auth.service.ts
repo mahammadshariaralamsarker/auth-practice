@@ -39,6 +39,7 @@ export class AuthService {
       return { message: 'OTP sent to your email' };
     }
   }
+  // Verify otp for account create
   async verifyOtpAndCreateAccount(email: string, otp: number) {
     const otpEntry = await this.prisma.otp.findUnique({
       where: {
@@ -80,7 +81,6 @@ export class AuthService {
   //login
   async login(dto: LoginDto, req: Request, res: Response) {
     const { email, password } = dto;
-    console.log(email);
     const foundUser = await this.prisma.user.findUnique({ where: { email } });
 
     if (!foundUser) {
@@ -104,7 +104,75 @@ export class AuthService {
     res.send({ message: 'Loggin successfull' });
   }
   //Forgotten Password
-  
+  async forgottenPassword(email: string) {
+    const foundUser = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!foundUser) {
+      throw new BadRequestException('User not found');
+    }
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000);
+    await this.prisma.otp2.deleteMany({ where: { email } });
+    await this.prisma.otp2.create({
+      data: {
+        email,
+        code: otpCode,
+      },
+    });
+    const token = await this.singInToken({
+      id: foundUser.id,
+      email: foundUser.email,
+    });
+    await this.mailService.sendOtp(email, otpCode);
+    return { message: 'OTP sent to your email', token };
+  }
+
+  // Verify otp for forgotten password
+  async verifyOtpForForgottenPassword(
+    email: string,
+    code: number,
+    token: string,
+  ) {
+    const decodedPayload = await this.decodeToken(token);
+    console.log(decodedPayload);
+    const user = await this.prisma.otp2.findFirst({
+      where: { email: decodedPayload.email },
+    });
+    if (code !== user?.code) {
+      return { message: 'otp verified failed ' };
+    }
+    const url = await this.singInToken({
+      id: decodedPayload.id,
+      email: user.email,
+    });
+    return {
+      message: 'Otp verification successful',
+      url: url,
+    };
+  }
+  async changePassword(
+    password: string,
+    confirmPassword: string,
+    token: string,
+  ) {
+    const decodedPayload = await this.decodeToken(token);
+    const user = await this.prisma.user.findUnique({
+      where: { id: decodedPayload.id },
+    });
+    if (password !== confirmPassword) {
+      return { message: 'Password and confirm password not matched' };
+    }
+    if (password === confirmPassword) {
+      const hashedPassword = await this.hashPassword(password);
+      await this.prisma.user.update({
+        where: { id: user?.id },
+        data: { hashedPassword },
+      });
+    }
+    return {
+      message: 'password changed successful',
+    };
+  }
   //logout
   logout(req: Request, res: Response) {
     res.clearCookie('token');
@@ -123,5 +191,14 @@ export class AuthService {
   async singInToken(args: { id: string; email: string }) {
     const payload = args;
     return this.jwt.signAsync(payload, { secret: jwtSecret });
+  }
+  async decodeToken(token: string): Promise<any> {
+    try {
+      const decoded = await this.jwt.verifyAsync(token, { secret: jwtSecret });
+      return decoded;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      return { message: 'Token authentication failed ' };
+    }
   }
 }
