@@ -8,34 +8,77 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { jwtSecret } from 'src/utils/constant';
 import { Response, Request } from 'express';
+import { MailService } from 'src/utils/nodemailer/mail.service';
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private mailService: MailService,
   ) {}
 
   async signup(dto: AuthDto) {
-    const { email, password } = dto;
-
+    const { email, password, confirmPassword } = dto;
     const foundUser = await this.prisma.user.findUnique({ where: { email } });
-
     if (foundUser) {
       throw new BadRequestException('Email already exists');
     }
+    if (password === confirmPassword) {
+      // Generate OTP and store
+      const otpCode = Math.floor(100000 + Math.random() * 900000);
+      await this.prisma.otp.create({
+        data: {
+          email,
+          code: otpCode,
+          password,
+        },
+      });
 
-    const hashedPassword = await this.hashPassword(password);
-
-    await this.prisma.user.create({
-      data: {
-        email,
-        hashedPassword,
+      await this.mailService.sendOtp(email, otpCode);
+      return { message: 'OTP sent to your email' };
+    }
+  }
+  async verifyOtpAndCreateAccount(email: string, otp: number) {
+    const otpEntry = await this.prisma.otp.findUnique({
+      where: {
+        email_code: {
+          email,
+          code: otp,
+        },
       },
     });
 
-    return { message: 'Signup successful' };
-  }
+    if (!otpEntry) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+    //Check if user already exists
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+    console.log(existingUser);
+    // Hash password
+    if (existingUser) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const hashedPassword = await this.hashPassword(otpEntry?.password);
 
+      // Create user
+      await this.prisma.user.create({
+        data: {
+          email,
+          hashedPassword,
+        },
+      });
+    }
+    // Clean up
+    await this.prisma.otp.deleteMany({
+      where: { email },
+    });
+
+    return { message: 'Account created successfully' };
+  }
   async signin(dto: AuthDto, req: Request, res: Response) {
     const { email, password } = dto;
     const foundUser = await this.prisma.user.findUnique({ where: { email } });
@@ -59,12 +102,11 @@ export class AuthService {
     }
     res.cookie('token', token);
     res.send({ message: 'Loggin successfull' });
-    //return { token };
   }
 
   signout(req: Request, res: Response) {
     res.clearCookie('token');
-    return res.send({ message: 'Loggedout Successfull' });
+    return res.send({ message: 'Logged out Successfull' });
   }
 
   async hashPassword(password: string): Promise<string> {

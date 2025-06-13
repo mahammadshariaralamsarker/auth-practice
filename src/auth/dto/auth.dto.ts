@@ -13,4 +13,9 @@ export class AuthDto {
     message: 'Password has to be between 3 and 20 characters',
   })
   public password: string;
+  @IsString()
+  @Length(3, 20, {
+    message: 'Password has to be between 3 and 20 characters',
+  })
+  confirmPassword: string;
 }
