@@ -58,12 +58,14 @@ export class AuthService {
     if (existingUser) {
       throw new BadRequestException('User already exists');
     }
-    console.log(existingUser);
     // Hash password
-    if (existingUser) {
+    if (!existingUser) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const hashedPassword = await this.hashPassword(otpEntry?.password);
-
+      // Clean up
+      await this.prisma.otp.deleteMany({
+        where: { email },
+      });
       // Create user
       await this.prisma.user.create({
         data: {
@@ -71,13 +73,8 @@ export class AuthService {
           hashedPassword,
         },
       });
+      return { message: 'Account created successfully' };
     }
-    // Clean up
-    await this.prisma.otp.deleteMany({
-      where: { email },
-    });
-
-    return { message: 'Account created successfully' };
   }
   async signin(dto: AuthDto, req: Request, res: Response) {
     const { email, password } = dto;
