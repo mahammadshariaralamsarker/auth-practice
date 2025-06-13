@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class AuthDto {
+export class LoginDto {
   @IsNotEmpty()
   @IsString()
   @IsEmail()
@@ -13,9 +13,4 @@ export class AuthDto {
     message: 'Password has to be between 3 and 20 characters',
   })
   public password: string;
-  @IsString()
-  @Length(3, 20, {
-    message: 'Password has to be between 3 and 20 characters',
-  })
-  confirmPassword: string;
 }
