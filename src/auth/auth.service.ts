@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -9,6 +13,7 @@ import { Response, Request } from 'express';
 import { MailService } from 'src/utils/nodemailer/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { UpdateUserDto } from './dto/updateUser.dto';
 @Injectable()
 export class AuthService {
   constructor(
@@ -62,6 +67,49 @@ export class AuthService {
     });
     return { message: 'Otp send to your email' };
   }
+  // Update Profile
+  async updateProfile(
+    data: UpdateUserDto,
+    file: Express.Multer.File,
+    token: string,
+  ) {
+    const decoded = await this.decodeToken(token);
+    const userExit = await this.prisma.user.findUnique({
+      where: {
+        id: decoded.id,
+      },
+    });
+    if (!userExit) {
+      throw new NotFoundException('User not found');
+    }
+    let pictureResult: string = '';
+    if (file) {
+      const uploadedData = await this.cloudinaryService.uploadImage(file);
+      pictureResult = uploadedData ? uploadedData['secure_url'] : '';
+    }
+    const modifyData = { ...data, picture: pictureResult };
+    const updated = await this.prisma.user.update({
+      where: {
+        id: decoded.id,
+      },
+      data: modifyData,
+      select: { 
+        name: true,
+        email: true,
+        phoneNumber: true,
+        bio: true,
+        location: true,
+        offerSkills: true,
+        wantSkills: true,
+        picture: true,
+        website: true,
+        updatedAt: true,
+      },
+    });
+    if(updated){
+      return {messsage:'Profile updated successful'}
+    }
+  }
   // Verify otp for account create
   async verifyOtpAndCreateAccount(email: string, otp: number) {
     console.log(email, otp);
@@ -83,11 +131,11 @@ export class AuthService {
         where: {
           email: email,
         },
-        data:{
-          verify:true
+        data: {
+          verify: true,
         },
       });
-      return {message:'User Created successful'}
+      return { message: 'User Created successful' };
     }
   }
   //login

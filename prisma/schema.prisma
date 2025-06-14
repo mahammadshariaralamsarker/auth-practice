@@ -43,3 +43,18 @@ model Otp2 {
 
   @@unique([email, code])
 }
+model UpdateUser {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  hashedPassword String
+  name          String?
+  phoneNumber   String?
+  bio           String?
+  location      String?
+  offerSkills   String[]
+  wantSkills    String[]
+  website       String?
+  picture       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt()
+}
