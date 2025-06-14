@@ -3,45 +3,67 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { jwtSecret } from 'src/utils/constant';
 import { Response, Request } from 'express';
 import { MailService } from 'src/utils/nodemailer/mail.service';
 import { LoginDto } from './dto/login.dto';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private mailService: MailService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
-  //Register Account
-  async register(data: string, file: Express.Multer.File) {
-    const { email, password, confirmPassword } = data;
-    const foundUser = await this.prisma.user.findUnique({ where: { email } });
-    if (foundUser) {
-      throw new BadRequestException('Email already exists');
-    }
-    if (password === confirmPassword) {
-      // Generate OTP and store
-      const otpCode = Math.floor(100000 + Math.random() * 900000);
-      await this.prisma.otp.create({
-        data: {
-          email,
-          code: otpCode,
-          password,
-        },
-      });
 
-      await this.mailService.sendOtp(email, otpCode);
-      return { message: 'OTP sent to your email' };
+  async register(data: string, file: Express.Multer.File) {
+    const parseData = JSON.parse(data);
+    const hashedPassword = await this.hashPassword(
+      parseData?.password as string,
+    );
+    if (parseData.email) {
+      const result = await this.prisma.user.findFirst({where:{email:parseData.email}})
+      if(result){
+        return {message:"The email already have a account "}
+      }
     }
+    let pictureResult: string = '';
+    if (file) {
+      const uploadedData = await this.cloudinaryService.uploadImage(file);
+      pictureResult = uploadedData ? uploadedData['secure_url'] : '';
+    }
+
+    // Create user
+    await this.prisma.user.create({
+      data: {
+        email: parseData.email,
+        hashedPassword: hashedPassword,
+        name: parseData.name,
+        phoneNumber: parseData.phoneNumber,
+        bio: parseData.bio,
+        location: parseData.location,
+        offerSkills: parseData.offerSkills,
+        wantSkills: parseData.wantSkills,
+        website: parseData.website,
+        picture: pictureResult,
+      },
+    });
+    const otpCode = Math.floor(100000 + Math.random() * 900000);
+    await this.prisma.otp2.deleteMany({ where: { email: parseData.email } });
+    await this.prisma.otp2.create({
+      data: {
+        email: parseData.email,
+        code: otpCode,
+      },
+    });
+    return { message: 'Otp send to your email' };
   }
   // Verify otp for account create
   async verifyOtpAndCreateAccount(email: string, otp: number) {
-    const otpEntry = await this.prisma.otp.findUnique({
+    const otpEntry = await this.prisma.otp2.findUnique({
       where: {
         email_code: {
           email,
@@ -49,32 +71,20 @@ export class AuthService {
         },
       },
     });
-
+    console.log(otpEntry);
     if (!otpEntry) {
       throw new BadRequestException('Invalid or expired OTP');
     }
     //Check if user already exists
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = await this.prisma.user.findFirst({
       where: { email },
     });
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
-    }
-    // Hash password
+
+    console.log(existingUser);
     if (!existingUser) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const hashedPassword = await this.hashPassword(otpEntry?.password);
-      // Clean up
       await this.prisma.otp.deleteMany({
         where: { email },
       });
-      /*   // Create user
-      await this.prisma.user.create({
-        data: {
-          email,
-          hashedPassword,
-        },
-      }); */
       return { message: 'Account created successfully' };
     }
   }
