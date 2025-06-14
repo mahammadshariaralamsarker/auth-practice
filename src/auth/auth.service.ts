@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -25,9 +24,11 @@ export class AuthService {
       parseData?.password as string,
     );
     if (parseData.email) {
-      const result = await this.prisma.user.findFirst({where:{email:parseData.email}})
-      if(result){
-        return {message:"The email already have a account "}
+      const result = await this.prisma.user.findFirst({
+        where: { email: parseData.email },
+      });
+      if (result) {
+        return { message: 'The email already have a account ' };
       }
     }
     let pictureResult: string = '';
@@ -63,29 +64,30 @@ export class AuthService {
   }
   // Verify otp for account create
   async verifyOtpAndCreateAccount(email: string, otp: number) {
-    const otpEntry = await this.prisma.otp2.findUnique({
+    console.log(email, otp);
+    const otpEntry = await this.prisma.otp2.findFirst({
       where: {
-        email_code: {
-          email,
-          code: otp,
-        },
+        email: email,
+        code: otp,
       },
     });
-    console.log(otpEntry);
     if (!otpEntry) {
       throw new BadRequestException('Invalid or expired OTP');
     }
     //Check if user already exists
     const existingUser = await this.prisma.user.findFirst({
-      where: { email },
+      where: { email: email },
     });
-
-    console.log(existingUser);
-    if (!existingUser) {
-      await this.prisma.otp.deleteMany({
-        where: { email },
+    if (existingUser) {
+      await this.prisma.user.update({
+        where: {
+          email: email,
+        },
+        data:{
+          verify:true
+        },
       });
-      return { message: 'Account created successfully' };
+      return {message:'User Created successful'}
     }
   }
   //login
