@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateSwapDto } from './dto/create-swap.dto';
-import { UpdateSwapDto } from './dto/update-swap.dto';
 import { PrismaService } from 'prisma/prisma.service';
 
 @Injectable()
@@ -31,8 +30,23 @@ export class SwapService {
     return `This action returns a #${id} swap`;
   }
 
-  update(id: number, updateSwapDto: UpdateSwapDto) {
-    return `This action updates a #${id} swap`;
+  async updateStatus(id: string, status: 'accepted' | 'rejected' | 'pending') {
+    const swaps = await this.prisma.swap.findMany({
+      where: {
+        receiver_id: id,
+        status: 'pending',
+      },
+    });
+    if (!swaps) {
+      throw new BadRequestException('Sender or Receiver does not exist');
+    }
+    console.log(swaps);
+
+    const update = await this.prisma.swap.update({
+      where: { id },
+      data: { status },
+    });
+    return { message: 'Status Updated Successfully', data: update };
   }
 
   remove(id: number) {

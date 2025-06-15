@@ -1,7 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { SwapService } from './swap.service';
 import { CreateSwapDto } from './dto/create-swap.dto';
-import { UpdateSwapDto } from './dto/update-swap.dto';
 
 @Controller('swap')
 export class SwapController {
@@ -22,9 +29,12 @@ export class SwapController {
     return this.swapService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSwapDto: UpdateSwapDto) {
-    return this.swapService.update(+id, updateSwapDto);
+  @Patch('status/:id')
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'accepted' | 'rejected' | 'pending',
+  ) {
+    return this.swapService.updateStatus(id, status);
   }
 
   @Delete(':id')
