@@ -22,9 +22,16 @@ export class SwapService {
     });
     return { message: 'Swap created successful', data: savedSwap };
   }
-  myCurrentStatus(authHeader: string) {
-    console.log(authHeader);
-    return `This action returns all swap`;
+  async myCurrentStatus(req: any, data: { status: string }) {
+    const statusCheckData = await this.prisma.swap.findMany({
+      where: {
+        AND: [{ user_id: req.user.id }, { status: data.status }],
+      },
+    });
+    return {
+      message: `Your ${data.status} status data is here`,
+      statusCheckData,
+    };
   }
 
   findOne(id: number) {

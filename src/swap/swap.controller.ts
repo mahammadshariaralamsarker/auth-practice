@@ -6,11 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
   Req,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { SwapService } from './swap.service';
 import { CreateSwapDto } from './dto/create-swap.dto';
+import { AuthGuard } from 'src/guard/auth.guard';
 
 @Controller('swap')
 export class SwapController {
@@ -20,16 +21,10 @@ export class SwapController {
   create(@Body() createSwapDto: CreateSwapDto) {
     return this.swapService.create(createSwapDto);
   }
-
+  @UseGuards(AuthGuard)
   @Get('/my-current-status')
-  findAll(@Req() req: Request) {
-    const authHeader = req.headers['authorization'] as string;
-    if (!authHeader || typeof authHeader !== 'string') {
-      throw new UnauthorizedException(
-        'Authorization header missing or malformed',
-      );
-    }
-    return this.swapService.myCurrentStatus(authHeader);
+  findAll(@Req() req: Request ,@Body() data:{status:string}) {
+    return this.swapService.myCurrentStatus(req, data);
   }
 
   @Get(':id')
