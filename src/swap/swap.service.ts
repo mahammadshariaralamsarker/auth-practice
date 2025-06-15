@@ -22,7 +22,8 @@ export class SwapService {
     });
     return { message: 'Swap created successful', data: savedSwap };
   }
-  findAll() {
+  myCurrentStatus(authHeader: string) {
+    console.log(authHeader);
     return `This action returns all swap`;
   }
 
@@ -31,7 +32,8 @@ export class SwapService {
   }
 
   async updateStatus(id: string, status: 'accepted' | 'rejected' | 'pending') {
-    const swaps = await this.prisma.swap.findMany({
+    console.log(id);
+    const swaps = await this.prisma.swap.findFirst({
       where: {
         receiver_id: id,
         status: 'pending',
@@ -40,11 +42,10 @@ export class SwapService {
     if (!swaps) {
       throw new BadRequestException('Sender or Receiver does not exist');
     }
-    console.log(swaps);
 
     const update = await this.prisma.swap.update({
-      where: { id },
-      data: { status },
+      where: { id: swaps.id },
+      data: { status: status },
     });
     return { message: 'Status Updated Successfully', data: update };
   }

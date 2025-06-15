@@ -6,6 +6,12 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { SwapModule } from './swap/swap.module';
 
 @Module({
-  imports: [AuthModule, PrismaModule, UsersModule, CloudinaryModule, SwapModule],
+  imports: [
+    AuthModule,
+    PrismaModule,
+    UsersModule,
+    CloudinaryModule,
+    SwapModule,
+  ],
 })
 export class AppModule {}
