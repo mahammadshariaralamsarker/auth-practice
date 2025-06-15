@@ -70,4 +70,5 @@ model Swap {
   sender      User     @relation("SentRequests", fields: [user_id], references: [id])
   receiver    User     @relation("ReceivedRequests", fields: [receiver_id], references: [id])
   createdAt   DateTime @default(now())
+  status      String   @default("pending")
 }
