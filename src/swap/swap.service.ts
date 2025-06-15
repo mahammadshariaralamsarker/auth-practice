@@ -1,13 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateSwapDto } from './dto/create-swap.dto';
 import { UpdateSwapDto } from './dto/update-swap.dto';
+import { PrismaService } from 'prisma/prisma.service';
 
 @Injectable()
 export class SwapService {
-  create(createSwapDto: CreateSwapDto) {
-    return 'This action adds a new swap';
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
+  async create(createSwapDto: CreateSwapDto) {
+    const sender = await this.prisma.user.findUnique({
+      where: { id: createSwapDto.user_id },
+    });
+    const receiver = await this.prisma.user.findUnique({
+      where: { id: createSwapDto.receiver_id },
+    });
+
+    if (!sender || !receiver) {
+      throw new BadRequestException('Sender or Receiver does not exist');
+    }
+    const savedSwap = await this.prisma.swap.create({
+      data: createSwapDto,
+    });
+    return { message: 'Swap created successful', data: savedSwap };
+  }
   findAll() {
     return `This action returns all swap`;
   }

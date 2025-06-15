@@ -23,6 +23,9 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt()
+
+  sentSwaps     Swap[] @relation("SentRequests")
+  receivedSwaps Swap[] @relation("ReceivedRequests")
 }
 
 model Otp {
@@ -43,18 +46,28 @@ model Otp2 {
 
   @@unique([email, code])
 }
+
 model UpdateUser {
-  id            String   @id @default(uuid())
-  email         String   @unique
+  id             String   @id @default(uuid())
+  email          String   @unique
   hashedPassword String
-  name          String?
-  phoneNumber   String?
-  bio           String?
-  location      String?
-  offerSkills   String[]
-  wantSkills    String[]
-  website       String?
-  picture       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt()
+  name           String?
+  phoneNumber    String?
+  bio            String?
+  location       String?
+  offerSkills    String[]
+  wantSkills     String[]
+  website        String?
+  picture        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt()
+}
+
+model Swap {
+  id          String   @id @unique @default(uuid())
+  user_id     String
+  receiver_id String
+  sender      User     @relation("SentRequests", fields: [user_id], references: [id])
+  receiver    User     @relation("ReceivedRequests", fields: [receiver_id], references: [id])
+  createdAt   DateTime @default(now())
 }

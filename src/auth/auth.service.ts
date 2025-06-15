@@ -158,10 +158,10 @@ export class AuthService {
       email: foundUser.email,
     });
     if (!token) {
-      throw new BadRequestException('Unauthorised');
+      throw new BadRequestException('Unauthorized');
     }
     res.cookie('token', token);
-    res.send({ message: 'Loggin successfull' });
+    res.send({ message: 'Login successful' });
   }
   //Forgotten Password
   async forgottenPassword(email: string) {

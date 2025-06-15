@@ -7,7 +7,7 @@ import { UpdateSwapDto } from './dto/update-swap.dto';
 export class SwapController {
   constructor(private readonly swapService: SwapService) {}
 
-  @Post()
+  @Post('/create-swap')
   create(@Body() createSwapDto: CreateSwapDto) {
     return this.swapService.create(createSwapDto);
   }
